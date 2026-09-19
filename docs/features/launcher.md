@@ -268,6 +268,17 @@ the empty query can never resolve is dead state a backup would then carry.
 The row prints `AppEntry.subtitle` beside its name — the one field for an entry whose name alone
 can't say what it acts on.
 
+### File Search in root
+
+While File Search is on, a nonempty root query also runs Spotlight. Hits land in a **Files** section
+— at most `FileSearchQuery.launcherLimit` (5) — and are not `AppEntry`s: they are `FileSearchResult`
+rows with the file actions, not a new `Kind`. An empty query never searches, so Favorites is not
+mixed with recents.
+
+`FileSearchQuery.promotesInLauncher` puts that section above the app hits when the query looks like a
+filename (a letter-only extension, a path, or an exact name match). Other queries keep apps first.
+The Search Files fallback still opens the full screen for the rest of the 200.
+
 ### Fallbacks
 
 A **fallback** is the other half of the query-driven idea: a command the query is the input for,

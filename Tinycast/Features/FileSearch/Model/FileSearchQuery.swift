@@ -3,8 +3,27 @@ import Foundation
 enum FileSearchQuery {
     static let candidateLimit = 1_000
     static let resultLimit = 200
+    /// Root search keeps this short so files cannot drown the app list.
+    static let launcherLimit = 5
     /// A blank screen is a shortlist, not a browser: enough rows to reach, never to scroll far.
     static let recentLimit = 20
+
+    /// Nil when root search must not run Spotlight — the empty query is recents on the screen only.
+    static func launcherQuery(_ raw: String) -> String? {
+        let query = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return query.isEmpty ? nil : query
+    }
+
+    /// A filename-shaped query leads with files so `invoice.pdf` is not buried under apps.
+    static func promotesInLauncher(_ query: String, top: FileSearchResult? = nil) -> Bool {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        if trimmed.contains("/") { return true }
+        let ext = URL(fileURLWithPath: trimmed).pathExtension
+        if !ext.isEmpty, ext.count <= 8, ext.allSatisfy(\.isLetter) { return true }
+        guard let top else { return false }
+        return top.name.caseInsensitiveCompare(trimmed) == .orderedSame
+    }
 
     static func terms(in query: String) -> [String] {
         query.split(whereSeparator: \Character.isWhitespace).map(String.init)

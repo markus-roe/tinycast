@@ -21,7 +21,9 @@ struct FileSearchList: View {
                 LazyVStack(spacing: 0) {
                     SectionHeader(title: title, isFirst: true)
                     ForEach(results) { result in
-                        FileSearchRow(result: result, selected: result.id == selectedID)
+                        FileSearchRow(
+                            result: result, selected: result.id == selectedID, showsLocation: false
+                        )
                             .selectionFrame(result.id == selectedID)
                             .contentShape(Rectangle())
                             .onRowClick(
@@ -45,17 +47,20 @@ struct FileSearchList: View {
     }
 }
 
-private struct FileSearchRow: View {
+struct FileSearchRow: View {
 
     @Environment(\.metrics) private var metrics
     let result: FileSearchResult
     let selected: Bool
+    /// Root search has no preview pane, so the parent path has to live on the row.
+    let showsLocation: Bool
     @State private var image: NSImage?
     @State private var hovered = false
 
-    init(result: FileSearchResult, selected: Bool) {
+    init(result: FileSearchResult, selected: Bool, showsLocation: Bool = false) {
         self.result = result
         self.selected = selected
+        self.showsLocation = showsLocation
         _image = State(initialValue: IconCache.cachedFitted(forFile: result.id))
     }
 
@@ -89,6 +94,13 @@ private struct FileSearchRow: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: 0)
+            if showsLocation {
+                Text(result.parentPath)
+                    .font(metrics.typography.rowTrailing)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
         }
         .padding(.horizontal, metrics.spacing.md)
         .padding(.vertical, metrics.spacing.sm)

@@ -12,7 +12,7 @@ first.
 | Fallback          | What happens to your text                                     | Offered when                                       |
 | ----------------- | ------------------------------------------------------------- | -------------------------------------------------- |
 | AI Chat           | Sent as a question in a new chat                              | [AI](/docs/ai) is on                               |
-| Search Files      | Opens [file search](/docs/features/file-search) with it typed | File Search is on                                  |
+| Search Files      | Opens the full [file search](/docs/features/file-search) screen with it typed. Matching files also appear in the launcher itself. | File Search is on                                  |
 | Run Shell Command | Runs in `zsh`, with its output in a window                    | Always, unless you untick it                       |
 | A quicklink       | Fills the quicklink's first `{argument}`                      | Quicklinks is on, and the link has an `{argument}` |
 

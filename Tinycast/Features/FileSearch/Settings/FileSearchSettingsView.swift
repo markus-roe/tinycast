@@ -9,7 +9,7 @@ struct FileSearchSettingsView: View {
             Section {
                 Toggle(isOn: $settings.fileSearchEnabled) {
                     SettingsRowTitle(.fileSearchFileSearch, "Enable File Search")
-                    Text("Uses the Spotlight index, only when you search.")
+                    Text("Uses the Spotlight index when you type, including in the launcher.")
                 }
             } header: {
                 SettingsSectionHeader(.fileSearchFileSearch)

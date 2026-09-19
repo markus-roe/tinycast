@@ -26,7 +26,7 @@ struct FileSearchScreen: PaletteScreen {
     func actions(at selection: Int) -> PopoverMenuContent? {
         guard let result = result(at: selection) else { return nil }
         return FileSearchActionsMenu.content(
-            result: result, core: core, vm: vm, target: vm.pasteTarget)
+            result: result, core: core, vm: vm, target: vm.pasteTarget, includesQuickLook: true)
     }
 
     func activate(at selection: Int) {
@@ -149,23 +149,28 @@ enum FileSearchPasteboardAction {
 @MainActor
 enum FileSearchActionsMenu {
     static func content(
-        result: FileSearchResult, core: AppCore, vm: PaletteState, target: PasteTarget?
+        result: FileSearchResult, core: AppCore, vm: PaletteState, target: PasteTarget?,
+        includesQuickLook: Bool = true
     ) -> PopoverMenuContent {
         let coordinator = core.fileSearchCoordinator
-        return PopoverMenuContent(
-            header: result.name,
-            items: [
-                PopoverMenuItem(
-                    title: result.isDirectory ? "Open Folder" : "Open File",
-                    systemImage: result.isDirectory ? "folder" : "doc", shortcut: "↵"
-                ) { coordinator.open(result) },
-                PopoverMenuItem(
-                    title: "Show in Finder", systemImage: "folder", shortcut: "⌘↵"
-                ) { coordinator.showInFinder(result) },
+        var leading: [PopoverMenuItem] = [
+            PopoverMenuItem(
+                title: result.isDirectory ? "Open Folder" : "Open File",
+                systemImage: result.isDirectory ? "folder" : "doc", shortcut: "↵"
+            ) { coordinator.open(result) },
+            PopoverMenuItem(
+                title: "Show in Finder", systemImage: "folder", shortcut: "⌘↵"
+            ) { coordinator.showInFinder(result) },
+        ]
+        if includesQuickLook {
+            leading.append(
                 PopoverMenuItem(title: "Quick Look", systemImage: "eye", shortcut: "⌘Y") {
                     vm.fileSearchQuickLook = true
-                },
-            ]
+                })
+        }
+        return PopoverMenuContent(
+            header: result.name,
+            items: leading
             + openWithItems(result: result, coordinator: coordinator)
             + [
                 PopoverMenuItem(

@@ -57,6 +57,24 @@ struct FileSearchTests {
             "ignored name globs keep their wildcards and join the expression as exclusions")
         expect(FileSearchQuery.candidateLimit == 1_000, "the Spotlight candidate cap is fixed")
         expect(FileSearchQuery.resultLimit == 200, "the displayed result cap is fixed")
+        expect(FileSearchQuery.launcherLimit == 5, "root search keeps files to a shortlist")
+        expect(FileSearchQuery.launcherQuery("  ") == nil, "empty root search must not run Spotlight")
+        expect(FileSearchQuery.launcherQuery(" invoice.pdf ") == "invoice.pdf", "root search trims")
+        expect(
+            FileSearchQuery.promotesInLauncher("invoice.pdf"),
+            "a letter extension leads with files so Return opens the file")
+        expect(
+            FileSearchQuery.promotesInLauncher("~/Desktop/notes.md"),
+            "a path is filename-shaped")
+        expect(
+            !FileSearchQuery.promotesInLauncher("2.5"),
+            "a trailing digit is not a file extension")
+        expect(
+            !FileSearchQuery.promotesInLauncher("safari"),
+            "a bare word keeps apps first")
+        expect(
+            FileSearchQuery.promotesInLauncher("Makefile", top: result("Makefile")),
+            "an exact filename still leads without an extension")
         expect(
             FileSearchQuery.matches(filename: "Résumé Final.pdf", query: "resume final"),
             "home-root matching mirrors case- and diacritic-insensitive Spotlight terms")

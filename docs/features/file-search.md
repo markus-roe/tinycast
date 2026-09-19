@@ -33,8 +33,13 @@ feature is enabled in Settings.
   only what the user added, so changing `FileSearchIgnoreList.defaults` reaches installs that already
   ran. The consequence is that the shipped six cannot be switched off.
 - **File Search is off by default, and off means no entry point or Spotlight work.** A nonempty query
-  on that screen is the first operation that searches, and the global shortcut no-ops while the
-  feature switch is off.
+  on the File Search screen *or* in root search is the first operation that searches. The empty
+  launcher query never asks for recents — that list stays on the screen. The global shortcut no-ops
+  while the feature switch is off.
+- **Root search lists a short Files section, never the full 200.** `FileSearchQuery.launcherLimit` is
+  5. A filename-shaped query (`invoice.pdf`, a path, or an exact name hit) puts that section above
+  the app hits so ↵ opens the file; every other query keeps apps first. The Search Files fallback
+  still opens the full screen.
 - **Tinycast asks for no file permission.** Hidden metadata items and application bundles are filtered,
   and Spotlight or TCC omissions produce a thinner result set rather than a prompt for Full Disk Access.
 - **A superseded query never publishes.** The session cancels its pending task and checks cancellation
@@ -237,6 +242,10 @@ the launcher; a second observation rebuilds the policy when either list changes.
 guards entry into `.fileSearch`, so neither a stale selected command nor the global shortcut can open
 the screen after the feature is disabled. Disabling cancels the session and returns an open File Search
 screen to the launcher without changing palette visibility.
+
+While the switch is on, a typed root-search query drives the same `FileSearchSession` the screen uses.
+`FileSearchCoordinator.syncSession` is the one writer: empty launcher input cancels, the File Search
+screen still asks for recents, and hiding the palette cancels either way.
 
 Search Files is bindable like every other built-in command — `AppEntry.hotKeyAction` answers
 `.command(.searchFiles)`, so its launcher row prints a bound chord as a keycap.

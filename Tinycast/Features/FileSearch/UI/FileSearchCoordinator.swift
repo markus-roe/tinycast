@@ -26,9 +26,29 @@ final class FileSearchCoordinator {
 
     func applyEnabled() {
         appIndex.setCommandsVisible([.searchFiles], settings.fileSearchEnabled)
-        guard !settings.fileSearchEnabled else { return }
-        session.cancel()
-        if palette.mode == .fileSearch { palette.prepare(mode: .launcher) }
+        guard settings.fileSearchEnabled else {
+            session.cancel()
+            if palette.mode == .fileSearch { palette.prepare(mode: .launcher) }
+            return
+        }
+        guard palette.isVisible else { return }
+        syncSession()
+    }
+
+    /// Root search runs the same session as the screen, but never the blank-screen recents query.
+    func syncSession() {
+        guard settings.fileSearchEnabled else {
+            session.cancel()
+            return
+        }
+        if palette.mode == .fileSearch {
+            session.search(palette.query, filter: palette.fileSearchFilter)
+        } else if palette.mode == .launcher, let query = FileSearchQuery.launcherQuery(palette.query)
+        {
+            session.search(query)
+        } else {
+            session.cancel()
+        }
     }
 
     func applyPolicy() {

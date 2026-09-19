@@ -17,9 +17,20 @@ struct LauncherList: View {
     var onCardActions: () -> Void = {}
     let onActivate: (AppEntry) -> Void
     let onActions: (AppEntry) -> Void
+    /// Spotlight hits for the typed query; nil when File Search is off or nothing matched yet.
+    var files: FilesSection?
     /// The `Use "…" with` section, always last; nil when nothing is typed.
     var fallbacks: FallbackSection?
     @Environment(RunningAppsMonitor.self) private var runningApps
+
+    /// What the Files section draws and where its rows go, addressed by position.
+    struct FilesSection {
+        let results: [FileSearchResult]
+        /// True when the query is filename-shaped, so files sit above the app hits.
+        let promoted: Bool
+        let onActivate: (Int) -> Void
+        let onActions: (Int) -> Void
+    }
 
     /// What the fallback section draws and where its rows go, addressed by position.
     struct FallbackSection {
@@ -63,6 +74,7 @@ struct LauncherList: View {
         case card(LeadCard)
         /// `slot` is the row's ⌘-digit, carried from the section build rather than searched.
         case app(AppEntry, slot: Character?)
+        case file(FileSearchResult, index: Int)
         case fallback(AppEntry, index: Int)
         var id: String {
             switch self {
@@ -70,6 +82,7 @@ struct LauncherList: View {
             case .fallbackHeader: return "fallback-header"
             case .card(let card): return card.rowID
             case .app(let app, _): return app.id
+            case .file(let file, _): return "file:" + file.id
             case .fallback(let app, _): return "fallback-" + app.id
             }
         }
@@ -77,7 +90,18 @@ struct LauncherList: View {
 
     /// Whether the selection sits on flat index 0: the card, else the first result.
     private var firstRowSelected: Bool {
-        card != nil ? cardSelected : selectedRowID != nil && selectedRowID == results.first?.id
+        if card != nil { return cardSelected }
+        if files?.promoted == true, let first = files?.results.first {
+            return selectedRowID == "file:" + first.id
+        }
+        return selectedRowID != nil && selectedRowID == results.first?.id
+    }
+
+    /// Every row the Files section contributes, ahead of apps only when the query promotes them.
+    private var fileRows: [Row] {
+        guard let files, !files.results.isEmpty else { return [] }
+        return [.header("Files")]
+            + files.results.enumerated().map { Row.file($1, index: $0) }
     }
 
     /// Every row the fallback section contributes, always after the results.
@@ -87,15 +111,23 @@ struct LauncherList: View {
             + fallbacks.entries.enumerated().map { Row.fallback($1, index: $0) }
     }
 
+    private var resultRows: [Row] {
+        results.isEmpty ? [] : [.header("Results")] + results.map { .app($0, slot: nil) }
+    }
+
+    private var listedRows: [Row] {
+        files?.promoted == true ? fileRows + resultRows : resultRows + fileRows
+    }
+
     private var rows: [Row] {
         var cardRows: [Row] = []
         if let card { cardRows = [.header(card.sectionTitle), .card(card)] }
         guard showSections else {
-            guard !results.isEmpty else { return cardRows + fallbackRows }
-            return cardRows + [.header("Results")] + results.map { .app($0, slot: nil) }
-                + fallbackRows
+            guard !results.isEmpty || files != nil else { return cardRows + fallbackRows }
+            return cardRows + listedRows + fallbackRows
         }
         var rows: [Row] = cardRows
+        if files?.promoted == true { rows.append(contentsOf: fileRows) }
         let favorites = results.prefix(favoriteCount)
         let rest = results.dropFirst(favoriteCount)
         var grouped: [AppEntry.Kind: [AppEntry]] = [:]
@@ -123,13 +155,14 @@ struct LauncherList: View {
             grouped.keys.allSatisfy(kinds.contains),
             "kind missing from the launcher's section order: "
                 + grouped.keys.filter { !kinds.contains($0) }.map(\.rawValue).joined(separator: ", "))
+        if files?.promoted != true { rows.append(contentsOf: fileRows) }
         return rows + fallbackRows
     }
 
     var body: some View {
         let rows = rows
         return Group {
-            if results.isEmpty && card == nil && fallbacks == nil {
+            if results.isEmpty && card == nil && fallbacks == nil && files == nil {
                 EmptyResults(text: "No apps found")
             } else {
                 ScrollViewReader { proxy in
@@ -162,6 +195,16 @@ struct LauncherList: View {
                                     .onTapGesture { onActivate(app) }
                                     .onRightClick { onActions(app) }
                                     .selectionFrame(app.id == selectedRowID)
+                                case .file(let file, let index):
+                                    FileSearchRow(
+                                        result: file,
+                                        selected: row.id == selectedRowID,
+                                        showsLocation: true
+                                    )
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { files?.onActivate(index) }
+                                    .onRightClick { files?.onActions(index) }
+                                    .selectionFrame(row.id == selectedRowID)
                                 case .fallback(let app, let index):
                                     AppRow(
                                         app: app, selected: row.id == selectedRowID, running: false,

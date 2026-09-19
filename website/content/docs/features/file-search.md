@@ -8,8 +8,10 @@ Search file and folder names in the folders you choose, using the index macOS al
 **Settings → File Search** holds the switch. It ships **off**. While it is off there is no command
 and no Spotlight work at all.
 
-Open it with the **Search Files** command, its own global shortcut, or the **Search Files** row under
-"Use … with" at the bottom of any launcher search. That last one opens with your text already typed.
+Once it is on, typing a name in the launcher also lists matching files — you do not have to open
+**Search Files** first. A filename like `invoice.pdf` is offered above the apps so Return opens it.
+The **Search Files** command, its shortcut, and the **Search Files** row under "Use … with" still
+open the full screen, with preview and type filters, already narrowed to what you typed.
 
 ## It asks for nothing
 

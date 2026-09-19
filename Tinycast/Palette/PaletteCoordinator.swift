@@ -89,7 +89,13 @@ final class PaletteCoordinator {
         }
         if let query { palette.query = query }
         windowController.show()
-        if palette.mode == .fileSearch { fileSearch.search(palette.query) }
+        if palette.mode == .fileSearch {
+            fileSearch.search(palette.query)
+        } else if palette.mode == .launcher, settings.fileSearchEnabled,
+            let query = FileSearchQuery.launcherQuery(palette.query)
+        {
+            fileSearch.search(query)
+        }
         if palette.mode == .processes { processes.filter(palette.query) }
         if palette.mode == .menuSearch { menuSearch.filter(palette.query) }
         if palette.mode == .switchWindows { windowSwitch.filter(palette.query) }

@@ -51,6 +51,14 @@ struct RootPaletteView: View {
     /// Compact vs. full; the source of truth is on `AppCore`, so the two can't disagree.
     private var isCollapsed: Bool { core.paletteCoordinator.paletteIsCollapsed }
 
+    /// Empty-query recents stay on the File Search screen; root search only lists a typed hit.
+    private var launcherFiles: [FileSearchResult] {
+        guard settings.fileSearchEnabled, FileSearchQuery.launcherQuery(vm.query) != nil else {
+            return []
+        }
+        return Array(fileSearch.results.prefix(FileSearchQuery.launcherLimit))
+    }
+
     /// The current mode's screen: its rows are the visible order the flat selection indexes.
     private var screen: any PaletteScreen {
         switch vm.mode {
@@ -60,7 +68,7 @@ struct RootPaletteView: View {
                 currencyRates: currencyRates, core: core, vm: vm, running: selectionIsRunning,
                 meeting: core.calendarCoordinator.cardedMeeting,
                 remindersReady: settings.remindersEnabled && reminders.access == .granted,
-                now: meetingClock.now,
+                files: launcherFiles, now: meetingClock.now,
                 openActions: openActions, openArgumentOptions: openArgumentOptions,
                 scrollToFollow: { scroll = ScrollIntent(kind: .follow) })
         case .uninstall:
@@ -398,7 +406,7 @@ struct RootPaletteView: View {
                 if vm.collapseQueryLineBreaks() { return }
                 vm.selection = 0
                 scroll = ScrollIntent(kind: .top)
-                if vm.mode == .fileSearch { fileSearch.search(vm.query, filter: vm.fileSearchFilter) }
+                syncFileSearch()
                 if vm.mode == .processes { processes.filter(vm.query) }
                 if vm.mode == .dictionary { dictionary.lookUp(vm.query) }
                 if vm.mode == .menuSearch { menuSearch.filter(vm.query) }
@@ -438,11 +446,7 @@ struct RootPaletteView: View {
                 // Every way out of the Uninstall screen: back chevron, bare backspace, a fresh summon.
                 if vm.mode != .uninstall { uninstall.cancel() }
                 // Entering with no query is the blank screen's own request for recents.
-                if vm.mode == .fileSearch {
-                    fileSearch.search(vm.query, filter: vm.fileSearchFilter)
-                } else {
-                    fileSearch.cancel()
-                }
+                syncFileSearch()
                 if vm.mode == .dictionary {
                     dictionary.lookUp(vm.query)
                 } else {
@@ -966,6 +970,11 @@ struct RootPaletteView: View {
         } else {
             openActions()
         }
+    }
+
+    /// Same session as the File Search screen; empty root search never asks for recents.
+    private func syncFileSearch() {
+        core.fileSearchCoordinator.syncSession()
     }
 
     /// Opens on the active filter, so the current value is the highlighted row like a pop-up's.

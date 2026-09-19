@@ -13,6 +13,8 @@ struct LauncherScreen: PaletteScreen {
     let meeting: MeetingEvent?
     /// Observed in the palette so a grant or the Settings switch can raise the card.
     let remindersReady: Bool
+    /// Top Spotlight hits for the typed query; empty unless File Search is on.
+    let files: [FileSearchResult]
     let now: Date
     let openActions: () -> Void
     /// Opens the palette's own menu for an `options=` field, keyed by argument name.
@@ -35,13 +37,15 @@ struct LauncherScreen: PaletteScreen {
     private let favoriteCount: Int
     /// The `Use "…" with` section, below every result; empty unless something is typed.
     private let fallbacks: [(fallback: Fallback, entry: AppEntry)]
+    /// Files lead when the query is filename-shaped, otherwise they trail the app hits.
+    private let promoteFiles: Bool
     /// Resolved in `init`: the palette indexes this several times per event, so it can't recompute.
     let rows: [Row]
 
     init(
         appIndex: AppIndex, favorites: FavoritesStore, visibility: VisibilityStore,
         currencyRates: CurrencyRateStore, core: AppCore, vm: PaletteState, running: Bool,
-        meeting: MeetingEvent?, remindersReady: Bool, now: Date,
+        meeting: MeetingEvent?, remindersReady: Bool, files: [FileSearchResult], now: Date,
         openActions: @escaping () -> Void, openArgumentOptions: @escaping (String) -> Void,
         scrollToFollow: @escaping () -> Void
     ) {
@@ -81,7 +85,13 @@ struct LauncherScreen: PaletteScreen {
             return ReminderQuery.lead(vm.query, now: now, calendar: .current)
         }()
         let fallbacks = core.fallbackCoordinator.entries(for: vm.query)
-        let entries = results.map(Row.entry) + fallbacks.map { Row.fallback($0.fallback, $0.entry) }
+        let files = Array(files.prefix(FileSearchQuery.launcherLimit))
+        let promoteFiles = FileSearchQuery.promotesInLauncher(vm.query, top: files.first)
+        let fileRows = files.map(Row.file)
+        let fallbackRows = fallbacks.map { Row.fallback($0.fallback, $0.entry) }
+        let entries = results.map(Row.entry)
+        let listed = promoteFiles
+            ? fileRows + entries + fallbackRows : entries + fileRows + fallbackRows
         let pinsFavorites = vm.query.trimmingCharacters(in: .whitespaces).isEmpty
         // At most one of them leads, so the flat index keeps a single-row offset.
         let meeting = pinsFavorites ? meeting : nil
@@ -89,21 +99,23 @@ struct LauncherScreen: PaletteScreen {
         self.results = results
         self.calc = calc
         self.fallbacks = fallbacks
+        self.files = files
+        self.promoteFiles = promoteFiles
         self.color = color
         self.reminder = reminder
         self.showSections = pinsFavorites || AppEntry.Kind.named(by: vm.query) != nil
         self.pinsFavorites = pinsFavorites
         self.favoriteCount = pinsFavorites ? results.prefix(while: favorites.isFavorite).count : 0
         if let calc {
-            self.rows = [.calc(calc)] + entries
+            self.rows = [.calc(calc)] + listed
         } else if let color {
-            self.rows = [.color(color)] + entries
+            self.rows = [.color(color)] + listed
         } else if let reminder {
-            self.rows = [.reminder(reminder)] + entries
+            self.rows = [.reminder(reminder)] + listed
         } else if let meeting {
-            self.rows = [.meeting(meeting)] + entries
+            self.rows = [.meeting(meeting)] + listed
         } else {
-            self.rows = entries
+            self.rows = listed
         }
     }
 
@@ -113,6 +125,7 @@ struct LauncherScreen: PaletteScreen {
         case meeting(MeetingEvent)
         case color(ColorValue)
         case reminder(ReminderDraft)
+        case file(FileSearchResult)
         case entry(AppEntry)
         /// Prefixed, because the same command can also be a ranked hit above its own fallback row.
         case fallback(Fallback, AppEntry)
@@ -123,6 +136,7 @@ struct LauncherScreen: PaletteScreen {
             case .meeting: return "meeting-card"
             case .color: return "color-card"
             case .reminder: return "reminder-card"
+            case .file(let file): return "file:" + file.id
             case .entry(let app): return app.id
             case .fallback(let fallback, _): return "fallback-" + fallback.id
             }
@@ -142,6 +156,7 @@ struct LauncherScreen: PaletteScreen {
         case .reminder: return "Add to Reminders"
         case .meeting(let meeting):
             return meeting.link == nil ? "Open in Calendar" : "Join Meeting"
+        case .file(let file): return file.isDirectory ? "Open Folder" : "Open File"
         case .entry(let app): return app.kind.descriptor.openVerb
         case .fallback(let fallback, _): return fallback.openVerb
         case nil: return "Open Application"
@@ -214,7 +229,7 @@ struct LauncherScreen: PaletteScreen {
     private func isCardSelected(_ selection: Int) -> Bool {
         switch row(at: selection) {
         case .calc, .meeting, .color, .reminder: return true
-        case .entry, .fallback, nil: return false
+        case .file, .entry, .fallback, nil: return false
         }
     }
 
@@ -242,6 +257,9 @@ struct LauncherScreen: PaletteScreen {
             return ReminderLeadActionsMenu.content(draft: draft, core: core)
         case .meeting(let meeting):
             return MeetingActionsMenu.content(meeting: meeting, core: core)
+        case .file(let file):
+            return FileSearchActionsMenu.content(
+                result: file, core: core, vm: vm, target: vm.pasteTarget, includesQuickLook: false)
         case .entry(let app):
             return AppActionsMenu.content(
                 app: app, searchQuery: vm.query, core: core, running: running,
@@ -268,6 +286,7 @@ struct LauncherScreen: PaletteScreen {
             core.clipboardCoordinator.copyColor(color, as: ColorFormat.primary(for: color))
         case .reminder(let draft): core.reminderCoordinator.addFromLauncher(draft)
         case .meeting(let meeting): core.calendarCoordinator.activateMeeting(id: meeting.id)
+        case .file(let file): core.fileSearchCoordinator.open(file)
         case .entry(let app):
             core.launcherCoordinator.launch(
                 app, searchQuery: vm.query, arguments: argumentValues(for: app))
@@ -279,6 +298,10 @@ struct LauncherScreen: PaletteScreen {
 
     /// ⌘↵ — only an entry backed by a file on disk has somewhere to be revealed.
     func secondary(at selection: Int) -> Bool {
+        if case .file(let file) = row(at: selection) {
+            core.fileSearchCoordinator.showInFinder(file)
+            return true
+        }
         guard let app = entry(at: selection), app.canRevealInFinder else { return false }
         core.launcherCoordinator.showInFinder(app)
         return true
@@ -293,6 +316,9 @@ struct LauncherScreen: PaletteScreen {
     }
 
     func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
+        if case .file(let file) = row(at: selection) {
+            return performFile(shortcut, on: file)
+        }
         switch shortcut {
         case .toggleFavorite: return toggleFavorite(at: selection)
         case .hideFromSearch: return hideFromSearch(at: selection)
@@ -301,6 +327,20 @@ struct LauncherScreen: PaletteScreen {
         case .favoriteSlot(let index): return launchFavorite(at: index)
         default: return false
         }
+    }
+
+    private func performFile(_ shortcut: PaletteShortcut, on file: FileSearchResult) -> Bool {
+        let coordinator = core.fileSearchCoordinator
+        switch shortcut {
+        case .copyFile: coordinator.copyFile(file)
+        case .copyName: coordinator.copyName(file)
+        case .copyPath: coordinator.copyPath(file)
+        case .pasteFile: coordinator.pasteFile(file)
+        case .openInTerminal: coordinator.openInTerminal(file)
+        case .delete: coordinator.trash(file)
+        default: return false
+        }
+        return true
     }
 
     /// ⌃⇧Q — the screen owns the chord, but only a running application has anything to quit.
@@ -444,8 +484,27 @@ struct LauncherScreen: PaletteScreen {
                 if let index = rows.firstIndex(of: .entry(app)) { vm.selection = index }
                 openActions()
             },
+            files: filesSection,
             fallbacks: fallbackSection
         )
+    }
+
+    /// Nil when File Search is off or the query is empty, so the section cannot appear alone.
+    private var filesSection: LauncherList.FilesSection? {
+        guard !files.isEmpty else { return nil }
+        return LauncherList.FilesSection(
+            results: files, promoted: promoteFiles,
+            onActivate: { activate(at: fileRow(at: $0)) },
+            onActions: {
+                vm.selection = fileRow(at: $0)
+                openActions()
+            })
+    }
+
+    /// Files sit either ahead of or behind the app hits, never mixed with fallbacks.
+    private func fileRow(at index: Int) -> Int {
+        let offset = (leadCard == nil ? 0 : 1) + (promoteFiles ? 0 : results.count)
+        return offset + index
     }
 
     /// Nil when nothing is typed, which is the one state the section has no input for.
