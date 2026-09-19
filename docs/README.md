@@ -31,8 +31,12 @@ open with an `## Invariants` section; read it before changing anything in that a
 [calendar](features/calendar.md) ·
 [camera](features/camera.md) ·
 [emoji](features/emoji.md) ·
+[SF Symbols](features/sf-symbols.md) ·
+[color picker](features/colors.md) ·
 [dictionary](features/dictionary.md) ·
 [file search](features/file-search.md) ·
+[processes](features/processes.md) ·
+[reminders](features/reminders.md) ·
 [menu search](features/menu-search.md) ·
 [notes](features/notes.md) ·
 [snippets](features/snippets.md) ·

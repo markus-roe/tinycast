@@ -414,6 +414,7 @@ extension View {
             .environment(core.customWindowSizes)
             .environment(core.customWindowSizeCoordinator)
             .environment(core.calendarStore)
+            .environment(core.reminders)
             .environment(core.aiSettings)
             .environment(core.mcpSettings)
             .environment(core.quickActionSettings)

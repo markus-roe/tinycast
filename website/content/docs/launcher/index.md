@@ -30,6 +30,8 @@ appear around it:
 - **A calculator card** at the top when your text is a
   [calculation](/docs/features/calculator), like `12% of 80` or `time in Tokyo`.
 - **A color card** when you paste a color like `#FF5733`.
+- **A reminder card** when Reminders is on and you type a when, like `in 2m test` or `tomorrow milk`.
+  Return adds it and closes the palette.
 - **Open in Browser** at the top when you type a web address or a bare domain, like `github.com`.
 - **"Use … with"** rows at the bottom, which send your text somewhere else. See
   [Fallbacks](/docs/launcher/fallbacks).

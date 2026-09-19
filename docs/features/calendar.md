@@ -104,10 +104,11 @@ carries the identity; `.generic` draws `link`.
 
 ## The card
 
-The card is `LauncherScreen.Row.meeting`, prepended the way the calculator card is. The two can never
-both lead: **the calculator only answers a typed query and the card only an empty one**, which is what
-keeps the flat selection index a single-row offset. `LauncherList.LeadCard` is that fact made
-structural — one optional card, one selected flag, one activate closure, whichever feature owns it.
+The card is `LauncherScreen.Row.meeting`, prepended the way the calculator card is. At most one card
+leads: **the calculator, colour and reminder cards answer a typed query and the meeting card only an
+empty one**, which is what keeps the flat selection index a single-row offset.
+`LauncherList.LeadCard` is that fact made structural — one optional card, one selected flag, one
+activate closure, whichever feature owns it.
 
 The countdown re-renders from `MeetingClock.now`, not from a keystroke, so `in 4 min` becomes
 `in 3 min` on the boundary. A partial minute rounds **up** (`in 1 min` at 20 seconds out), and the

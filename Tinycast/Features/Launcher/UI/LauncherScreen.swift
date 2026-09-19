@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The root search: favorites first, then one section per entry kind, led by the calculator card.
+/// The root search: favorites first, then one section per entry kind, led by at most one card.
 struct LauncherScreen: PaletteScreen {
     let appIndex: AppIndex
     let favorites: FavoritesStore
@@ -11,6 +11,8 @@ struct LauncherScreen: PaletteScreen {
     let running: Bool
     /// The join card's meeting, resolved by the coordinator; nil unless one is due.
     let meeting: MeetingEvent?
+    /// Observed in the palette so a grant or the Settings switch can raise the card.
+    let remindersReady: Bool
     let now: Date
     let openActions: () -> Void
     /// Opens the palette's own menu for an `options=` field, keyed by argument name.
@@ -23,6 +25,8 @@ struct LauncherScreen: PaletteScreen {
     private let calc: CalcResult?
     /// The colour the query itself spells, if it spells one; nil for every other query.
     private let color: ColorValue?
+    /// A typed when, only while Reminders is on; nil so prose never leads the list.
+    private let reminder: ReminderDraft?
     /// Sections stand in for the ranked Results list, which a typed query collapses to.
     private let showSections: Bool
     /// Only the empty query pins favorites — a category shows its sections without one of its own.
@@ -37,7 +41,7 @@ struct LauncherScreen: PaletteScreen {
     init(
         appIndex: AppIndex, favorites: FavoritesStore, visibility: VisibilityStore,
         currencyRates: CurrencyRateStore, core: AppCore, vm: PaletteState, running: Bool,
-        meeting: MeetingEvent?, now: Date,
+        meeting: MeetingEvent?, remindersReady: Bool, now: Date,
         openActions: @escaping () -> Void, openArgumentOptions: @escaping (String) -> Void,
         scrollToFollow: @escaping () -> Void
     ) {
@@ -47,6 +51,7 @@ struct LauncherScreen: PaletteScreen {
         self.core = core
         self.vm = vm
         self.running = running
+        self.remindersReady = remindersReady
         self.now = now
         self.openActions = openActions
         self.openArgumentOptions = openArgumentOptions
@@ -70,6 +75,11 @@ struct LauncherScreen: PaletteScreen {
             ? CalcMemo.evaluate(vm.query, rates: currencyRates.rates, format: core.calcNumberFormat) : nil
         // After the calculator: `#FF5733` is never arithmetic, so the two can't both answer.
         let color = calc == nil && pinned == nil ? ColorValue.parse(vm.query) : nil
+        // After colour: a parsed when is a reminder, so a conversion never shares the slot.
+        let reminder: ReminderDraft? = {
+            guard calc == nil, color == nil, pinned == nil, remindersReady else { return nil }
+            return ReminderQuery.lead(vm.query, now: now, calendar: .current)
+        }()
         let fallbacks = core.fallbackCoordinator.entries(for: vm.query)
         let entries = results.map(Row.entry) + fallbacks.map { Row.fallback($0.fallback, $0.entry) }
         let pinsFavorites = vm.query.trimmingCharacters(in: .whitespaces).isEmpty
@@ -80,6 +90,7 @@ struct LauncherScreen: PaletteScreen {
         self.calc = calc
         self.fallbacks = fallbacks
         self.color = color
+        self.reminder = reminder
         self.showSections = pinsFavorites || AppEntry.Kind.named(by: vm.query) != nil
         self.pinsFavorites = pinsFavorites
         self.favoriteCount = pinsFavorites ? results.prefix(while: favorites.isFavorite).count : 0
@@ -87,6 +98,8 @@ struct LauncherScreen: PaletteScreen {
             self.rows = [.calc(calc)] + entries
         } else if let color {
             self.rows = [.color(color)] + entries
+        } else if let reminder {
+            self.rows = [.reminder(reminder)] + entries
         } else if let meeting {
             self.rows = [.meeting(meeting)] + entries
         } else {
@@ -99,6 +112,7 @@ struct LauncherScreen: PaletteScreen {
         case calc(CalcResult)
         case meeting(MeetingEvent)
         case color(ColorValue)
+        case reminder(ReminderDraft)
         case entry(AppEntry)
         /// Prefixed, because the same command can also be a ranked hit above its own fallback row.
         case fallback(Fallback, AppEntry)
@@ -108,6 +122,7 @@ struct LauncherScreen: PaletteScreen {
             case .calc: return "calc-card"
             case .meeting: return "meeting-card"
             case .color: return "color-card"
+            case .reminder: return "reminder-card"
             case .entry(let app): return app.id
             case .fallback(let fallback, _): return "fallback-" + fallback.id
             }
@@ -124,6 +139,7 @@ struct LauncherScreen: PaletteScreen {
         switch row(at: clampedSelection) {
         case .calc: return "Copy Answer"
         case .color: return "Copy Color"
+        case .reminder: return "Add to Reminders"
         case .meeting(let meeting):
             return meeting.link == nil ? "Open in Calendar" : "Join Meeting"
         case .entry(let app): return app.kind.descriptor.openVerb
@@ -197,7 +213,7 @@ struct LauncherScreen: PaletteScreen {
 
     private func isCardSelected(_ selection: Int) -> Bool {
         switch row(at: selection) {
-        case .calc, .meeting, .color: return true
+        case .calc, .meeting, .color, .reminder: return true
         case .entry, .fallback, nil: return false
         }
     }
@@ -206,6 +222,7 @@ struct LauncherScreen: PaletteScreen {
     private var leadCard: LauncherList.LeadCard? {
         if let calc { return .calc(calc) }
         if let color { return .color(color) }
+        if let reminder { return .reminder(reminder, now: now) }
         return meeting.map { .meeting($0, now: now) }
     }
 
@@ -221,6 +238,8 @@ struct LauncherScreen: PaletteScreen {
             return result.isActionable ? CalcActionsMenu.content(result: result, core: core) : nil
         case .color(let color):
             return ColorActionsMenu.content(color: color, core: core)
+        case .reminder(let draft):
+            return ReminderLeadActionsMenu.content(draft: draft, core: core)
         case .meeting(let meeting):
             return MeetingActionsMenu.content(meeting: meeting, core: core)
         case .entry(let app):
@@ -247,6 +266,7 @@ struct LauncherScreen: PaletteScreen {
         case .calc(let result): core.calculatorCoordinator.copyCalculatorResult(result)
         case .color(let color):
             core.clipboardCoordinator.copyColor(color, as: ColorFormat.primary(for: color))
+        case .reminder(let draft): core.reminderCoordinator.addFromLauncher(draft)
         case .meeting(let meeting): core.calendarCoordinator.activateMeeting(id: meeting.id)
         case .entry(let app):
             core.launcherCoordinator.launch(

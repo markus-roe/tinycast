@@ -49,6 +49,7 @@ enum SettingsBackupCoverage {
         "appleShortcutsEnabled": .appleShortcutsEnabled,
         "extensionsShowInLauncher": .extensionsShowInLauncher,
         "calendarShowInLauncher": .calendarShowInLauncher,
+        "remindersShowInLauncher": .remindersShowInLauncher,
         "calendarLauncherLimit": .calendarLauncherLimit,
         "calendarIncludesTomorrow": .calendarIncludesTomorrow,
         "joinWindowMinutes": .joinWindowMinutes,
@@ -89,6 +90,8 @@ enum SettingsBackupCoverage {
             "Names a browser installed on this Mac; another Mac may not have it.",
         AppSettingsKey.calendarEnabled.rawValue:
             "Doubles as consent to read your calendar; an import must not grant calendar access.",
+        AppSettingsKey.remindersEnabled.rawValue:
+            "Doubles as consent to read and write Apple Reminders; an import must not grant that.",
         AppSettingsKey.autoJoinMeetings.rawValue:
             "Arms the app to open meeting links unattended; an import must not switch that on.",
         AppSettingsKey.cameraPreview.rawValue:

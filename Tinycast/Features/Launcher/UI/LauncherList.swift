@@ -35,12 +35,14 @@ struct LauncherList: View {
         case calc(CalcResult)
         case meeting(MeetingEvent, now: Date)
         case color(ColorValue)
+        case reminder(ReminderDraft, now: Date)
 
         var sectionTitle: String {
             switch self {
             case .calc: return "Calculator"
             case .meeting: return "Meeting"
             case .color: return "Color"
+            case .reminder: return "Reminders"
             }
         }
 
@@ -49,6 +51,7 @@ struct LauncherList: View {
             case .calc: return "calc-card"
             case .meeting: return "meeting-card"
             case .color: return "color-card"
+            case .reminder: return "reminder-card"
             }
         }
     }
@@ -201,6 +204,8 @@ private struct LeadCardView: View {
             MeetingCard(meeting: meeting, now: now, selected: selected)
         case .color(let color):
             ColorCard(color: color, selected: selected)
+        case .reminder(let draft, let now):
+            ReminderCard(draft: draft, now: now, calendar: .current, selected: selected)
         }
     }
 }

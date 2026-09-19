@@ -47,14 +47,22 @@ cut off. It resets each time you open the palette.
 | Open File / Open Folder | <kbd>return</kbd>                    |
 | Show in Finder          | <kbd>⌘</kbd><kbd>return</kbd>        |
 | Quick Look              | <kbd>⌘</kbd><kbd>Y</kbd>             |
+| Open in Terminal        | <kbd>⌘</kbd><kbd>T</kbd>             |
+| Open in Editor          | —                                    |
+| Share via AirDrop       | —                                    |
 | Copy File               | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>C</kbd> |
 | Paste File to …         | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>V</kbd> |
 | Copy Name               | <kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd> |
 | Copy Path               | <kbd>⌃</kbd><kbd>⌘</kbd><kbd>C</kbd> |
+| Finder tags             | —                                    |
 | Move to Trash           | <kbd>⌃</kbd><kbd>X</kbd>             |
 
 - **Quick Look** opens a large preview inside the palette, and it plays media straight away.
   <kbd>esc</kbd> or **Close** puts it away.
+- **Open in Terminal** opens the folder — or the file's parent — in Ghostty, Warp, iTerm or Terminal.
+- **Open in Editor** opens it in Cursor, VS Code, Zed, Xcode or another installed editor.
+- **Share via AirDrop** hands the file to the system picker.
+- **Finder tags** toggle the colour labels and let you add a named tag.
 - **Copy File** puts the file itself on the clipboard, ready to paste into Finder or Mail.
 - **Paste File to …** pastes it into the app you opened the palette over.
 - **Copy Name** and **Copy Path** keep the palette open, so you can copy several in a row.

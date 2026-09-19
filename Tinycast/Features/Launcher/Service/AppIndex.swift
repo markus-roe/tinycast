@@ -357,6 +357,8 @@ final class AppIndex {
     private var hiddenCommands: Set<CommandID> = []
     /// Kept out of launcher search by a "Show in launcher" switch, yet still runnable by shortcut.
     private var unlistedCommands: Set<CommandID> = []
+    /// Apps a feature replaces in search; they stay in Settings and keep a bound shortcut.
+    private var unlistedBundleIDs: Set<String> = []
     private var nameCache = BundleNameCache()
     private var paneCache: SettingsPaneScanner.Cache?
     private var isRefreshing = false
@@ -406,6 +408,14 @@ final class AppIndex {
         guard updated != unlistedCommands else { return }
         unlistedCommands = updated
         publishEntries()
+    }
+
+    func setApplicationsListed(_ bundleIDs: Set<String>, _ listed: Bool) {
+        let updated =
+            listed ? unlistedBundleIDs.subtracting(bundleIDs) : unlistedBundleIDs.union(bundleIDs)
+        guard updated != unlistedBundleIDs else { return }
+        unlistedBundleIDs = updated
+        entriesRevision &+= 1
     }
 
     /// Replaces the command slice without rescanning, so Settings edits land at once.
@@ -619,7 +629,7 @@ final class AppIndex {
     func matches(_ query: String, limit: Int = 200) -> [AppEntry] {
         let q = query.trimmingCharacters(in: .whitespaces)
         // The opening list stays alphabetical: a list that reorders as you use it is unscannable.
-        guard !q.isEmpty else { return apps }
+        guard !q.isEmpty else { return listedApps }
         let key = MatchKey(
             query: q, entriesRevision: entriesRevision, rankingRevision: ranking.revision,
             aliasRevision: aliases.revision)
@@ -631,7 +641,7 @@ final class AppIndex {
 
     /// Slice order is section order, so filtering keeps sections and selection aligned.
     private func categoryListing(_ kind: AppEntry.Kind, query: String) -> [AppEntry] {
-        apps.filter { $0.kind == kind || FuzzyMatch.normalized($0.name) == FuzzyMatch.normalized(query) }
+        listedApps.filter { $0.kind == kind || FuzzyMatch.normalized($0.name) == FuzzyMatch.normalized(query) }
     }
 
     /// The launcher's ordered list: ranked matches minus hidden entries, favorites pinned first.
@@ -652,11 +662,18 @@ final class AppIndex {
         }
     }
 
+    /// Search and the empty list, not Settings: an unlisted app still has a checkbox and a shortcut.
+    private var listedApps: [AppEntry] {
+        unlistedBundleIDs.isEmpty
+            ? apps
+            : apps.filter { $0.bundleID.map { !unlistedBundleIDs.contains($0) } ?? true }
+    }
+
     private func rank(_ q: String, limit: Int) -> [AppEntry] {
         Signposts.interval("AppIndex.rank") {
             let learned = ranking.usage(query: q)
             return LauncherOrder.ranked(
-                apps, query: FuzzyMatch.Query(q), limit: limit,
+                listedApps, query: FuzzyMatch.Query(q), limit: limit,
                 fields: { app in
                     guard let alias = self.aliases.alias(for: app.preferenceKey) else {
                         return SearchFields(app.aliases)

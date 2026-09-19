@@ -174,8 +174,20 @@ final class LauncherCoordinator {
             paletteCoordinator.togglePalette(mode: .clipboard)
         case .searchEmoji:
             paletteCoordinator.togglePalette(mode: .emoji)
+        case .searchSFSymbols:
+            paletteCoordinator.togglePalette(mode: .sfSymbols)
+        case .pickColor:
+            core.colorCoordinator.pickFromScreen()
+        case .colorHistory:
+            core.colorCoordinator.showHistory()
         case .searchFiles:
             fileSearchCoordinator.show()
+        case .manageProcesses:
+            core.processCoordinator.show()
+        case .reminders:
+            core.reminderCoordinator.show()
+        case .createReminder:
+            core.reminderCoordinator.create()
         case .searchMenuItems:
             menuSearchCoordinator.show()
         case .switchWindows:

@@ -106,6 +106,40 @@ final class DialogController: NSObject, NSWindowDelegate {
         return state.values
     }
 
+    func prompt(
+        title: String, message: String?, symbol: String?, placeholder: String,
+        confirmTitle: String, initial: String = ""
+    ) async -> String? {
+        let state = DialogPromptState(text: initial, placeholder: placeholder)
+        let request = DialogRequest(
+            title: title, message: message, symbol: symbol, tone: .neutral,
+            actions: [
+                DialogAction(title: confirmTitle),
+                DialogAction(title: "Cancel", role: .cancel)
+            ],
+            defaultIndex: 0, cancelIndex: 1, accessory: .prompt(state))
+        guard await present(request) == 0, state.isValid else { return nil }
+        return state.trimmed
+    }
+
+    func createReminder(form: ReminderForm) async -> ReminderDraft? {
+        let state = ReminderFormState()
+        state.form = form
+        let request = DialogRequest(
+            title: "New Reminder",
+            message: "It goes on the list new reminders go to.",
+            symbol: "bell", tone: .neutral,
+            actions: [
+                DialogAction(title: "Add"),
+                DialogAction(title: "Cancel", role: .cancel)
+            ],
+            defaultIndex: 0, cancelIndex: 1, accessory: .reminderForm(state))
+        guard await present(request) == 0,
+            state.form.isValid(now: Date(), calendar: .current)
+        else { return nil }
+        return state.form.draft(now: Date(), calendar: .current)
+    }
+
     private func present(_ request: DialogRequest) async -> Int {
         // Keyed on the continuation, so a panel still fading can't swallow the next.
         guard continuation == nil else { return request.cancelIndex }
@@ -114,8 +148,8 @@ final class DialogController: NSObject, NSWindowDelegate {
             onPresentationChanged(true)
             let width =
                 switch request.accessory {
-                case nil, .volume: metrics.size.dialogCompactWidth
-                case .eventDraft, .snippetArguments: metrics.size.dialogWidth
+                case nil, .volume, .prompt: metrics.size.dialogCompactWidth
+                case .eventDraft, .snippetArguments, .reminderForm: metrics.size.dialogWidth
                 }
             let content = hostingView(
                 DialogView(
@@ -157,6 +191,11 @@ final class DialogController: NSObject, NSWindowDelegate {
         // Non-activating like the palette: key focus without pulling the user out.
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
+        // FocusState onAppear loses the race with a non-activating panel becoming key.
+        focusFirstField(in: panel)
+        Task { @MainActor in
+            focusFirstField(in: panel)
+        }
 
         NSAnimationContext.runAnimationGroup { context in
             context.duration = Theme.Duration.dialogEnter
@@ -169,10 +208,14 @@ final class DialogController: NSObject, NSWindowDelegate {
 
     /// A refused primary action leaves the dialog up, as a greyed-out button would.
     private static func accepts(_ index: Int, for request: DialogRequest) -> Bool {
-        guard index == request.defaultIndex, case .eventDraft(let state) = request.accessory else {
-            return true
+        guard index == request.defaultIndex else { return true }
+        switch request.accessory {
+        case .eventDraft(let state): return state.draft.isValid
+        case .prompt(let state): return state.isValid
+        case .reminderForm(let state):
+            return state.form.isValid(now: Date(), calendar: .current)
+        default: return true
         }
-        return state.draft.isValid
     }
 
     /// Resumes before the fade finishes, so a confirmation isn't held up by animation.
@@ -186,6 +229,20 @@ final class DialogController: NSObject, NSWindowDelegate {
         closing?.onKey = nil
         continuation.resume(returning: index)
         closing?.fadeOut(duration: Theme.Duration.dialogExit)
+    }
+
+    private func focusFirstField(in panel: NSPanel) {
+        guard let content = panel.contentView, let field = firstTextField(in: content) else { return }
+        panel.makeFirstResponder(field)
+    }
+
+    private func firstTextField(in view: NSView) -> NSView? {
+        if view is NSDatePicker { return nil }
+        if view is NSTextField, !view.isHidden, view.acceptsFirstResponder { return view }
+        for child in view.subviews {
+            if let field = firstTextField(in: child) { return field }
+        }
+        return nil
     }
 
     private var metrics: InterfaceMetrics { settings.interfaceSize.metrics }

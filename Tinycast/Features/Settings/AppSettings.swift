@@ -374,6 +374,17 @@ final class AppSettings {
         }
     }
 
+    /// Doubles as Reminders-access consent, so only `ReminderCoordinator` may write it.
+    var remindersEnabled: Bool {
+        didSet { defaults.set(remindersEnabled, forKey: Key.remindersEnabled.rawValue) }
+    }
+
+    var remindersShowInLauncher: Bool {
+        didSet {
+            defaults.set(remindersShowInLauncher, forKey: Key.remindersShowInLauncher.rawValue)
+        }
+    }
+
     /// Doubles as calendar-access consent, so only `CalendarCoordinator` may write it.
     var calendarEnabled: Bool {
         didSet { defaults.set(calendarEnabled, forKey: Key.calendarEnabled.rawValue) }
@@ -633,6 +644,10 @@ final class AppSettings {
             defaults.stringArray(forKey: Key.extensionCustomSearchPaths.rawValue) ?? []
         // Opt-in, like extensions: until it is asked for, EventKit is never loaded.
         calendarEnabled = defaults.bool(forKey: Key.calendarEnabled.rawValue)
+        remindersEnabled = defaults.bool(forKey: Key.remindersEnabled.rawValue)
+        remindersShowInLauncher =
+            defaults.object(forKey: Key.remindersShowInLauncher.rawValue) == nil
+            || defaults.bool(forKey: Key.remindersShowInLauncher.rawValue)
         calendarShowInLauncher =
             defaults.object(forKey: Key.calendarShowInLauncher.rawValue) == nil
             || defaults.bool(forKey: Key.calendarShowInLauncher.rawValue)

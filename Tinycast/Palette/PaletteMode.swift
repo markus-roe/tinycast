@@ -7,7 +7,11 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case aiHistory
     case calculatorHistory
     case emoji
+    case sfSymbols
+    case colors
     case fileSearch
+    case processes
+    case reminders
     case menuSearch
     case switchWindows
     case schedule
@@ -28,7 +32,11 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .aiHistory: return "clock.arrow.circlepath"
         case .calculatorHistory: return "plus.forwardslash.minus"
         case .emoji: return "face.smiling"
+        case .sfSymbols: return "square.grid.2x2"
+        case .colors: return "eyedropper"
         case .fileSearch: return "doc.text.magnifyingglass"
+        case .processes: return "cpu"
+        case .reminders: return "bell"
         case .menuSearch: return "menubar.rectangle"
         case .switchWindows: return "macwindow.on.rectangle"
         case .schedule: return "calendar"
@@ -47,7 +55,11 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .aiHistory: return "Search chats…"
         case .calculatorHistory: return "Do math, convert units, or search your past calculations…"
         case .emoji: return "Search emoji and symbols…"
+        case .sfSymbols: return "Search SF Symbols…"
+        case .colors: return "Pick a colour or convert one…"
         case .fileSearch: return "Search files and folders…"
+        case .processes: return "Search processes, PIDs or :ports…"
+        case .reminders: return "milk, in 25m Tee, tomorrow…"
         case .menuSearch: return "Search menu bar items…"
         case .switchWindows: return "Search open windows…"
         case .schedule: return "Search your schedule…"

@@ -60,9 +60,10 @@ extension SettingsTab {
         case .navigation: [.switchWindows, .searchMenuItems]
         case .windowManagement: [.createWindowLayout, .captureWindowLayout]
         case .clipboard: [.clipboardHistory]
-        case .emoji: [.searchEmoji]
+        case .emoji: [.searchEmoji, .searchSFSymbols]
         case .calendar:
             [.joinNextMeeting, .mySchedule, .createEvent, .copyMeetingLink, .openInCalendar]
+        case .reminders: [.reminders, .createReminder]
         default: []
         }
     }

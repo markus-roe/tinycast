@@ -49,7 +49,11 @@ keep it actively maintained. GitHub Sponsors isn't available in my country, so p
 - **Global hotkey** — one shortcut summons the palette from anywhere.
 - **Per-app hotkeys** — bind a key to an app; press it to toggle (focus/hide).
 - **Search Files** — open files and folders from the folders you choose, through Spotlight, with no
-  index of our own.
+  index of our own. Open in Terminal or your editor, AirDrop, or set Finder tags from the row.
+- **Manage Processes** — find a process by name, PID or `:3000` and quit it.
+- **Reminders** — list and add Apple Reminders from the palette (`milk`, `in 25m Tee`,
+  `tomorrow milk`), or type a when in root search (`in 2m test`) to add without opening the list.
+  They sync to your iPhone when iCloud Reminders is on.
 - **Dictionary** — look a word up with the Define Word command, or define whatever you typed from the
   launcher's fallbacks, read from the Mac's own dictionaries.
 - **Clipboard history** — text and images, searchable, pasted back into the app you were using.

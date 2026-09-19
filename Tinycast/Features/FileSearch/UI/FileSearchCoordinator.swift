@@ -101,4 +101,97 @@ final class FileSearchCoordinator {
             }
         }
     }
+
+    func openInTerminal(_ result: FileSearchResult) {
+        guard let terminal = FileActionRunner.installedTerminal() else {
+            Task {
+                await core.showNotice(
+                    title: "No Terminal Found",
+                    message: "Install Terminal, iTerm, Warp or Ghostty.",
+                    symbol: "terminal", tone: .danger)
+            }
+            return
+        }
+        let folder = FileActionPolicy.containerURL(for: result.url, isDirectory: result.isDirectory)
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        Task {
+            do {
+                try await FileActionRunner.open([folder], withApplicationAt: terminal.url)
+            } catch {
+                await core.showNotice(
+                    title: "Couldn’t Open in \(terminal.name)",
+                    message: error.localizedDescription,
+                    symbol: "terminal", tone: .danger)
+            }
+        }
+    }
+
+    func openInEditor(_ result: FileSearchResult) {
+        guard let editor = FileActionRunner.installedEditor(openingFolder: result.isDirectory)
+        else {
+            Task {
+                await core.showNotice(
+                    title: "No Editor Found",
+                    message: "Install Cursor, VS Code, Zed, Xcode or TextEdit.",
+                    symbol: "chevron.left.forwardslash.chevron.right", tone: .danger)
+            }
+            return
+        }
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        Task {
+            do {
+                try await FileActionRunner.open([result.url], withApplicationAt: editor.url)
+            } catch {
+                await core.showNotice(
+                    title: "Couldn’t Open in \(editor.name)",
+                    message: error.localizedDescription,
+                    symbol: "chevron.left.forwardslash.chevron.right", tone: .danger)
+            }
+        }
+    }
+
+    func shareViaAirDrop(_ result: FileSearchResult) {
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        guard FileActionRunner.shareViaAirDrop(result.url) else {
+            Task {
+                await core.showNotice(
+                    title: "Couldn’t Share \(result.name)",
+                    message: "AirDrop is unavailable for this item.",
+                    symbol: "square.and.arrow.up", tone: .danger)
+            }
+            return
+        }
+    }
+
+    func toggleTag(_ tag: String, on result: FileSearchResult) {
+        writeTags(FileActionPolicy.toggling(tag, in: FileActionRunner.tags(at: result.url)), on: result)
+    }
+
+    func addTag(_ result: FileSearchResult) {
+        Task {
+            guard
+                let raw = await core.prompt(
+                    title: "Add Tag", message: "Finder shows it on \(result.name).",
+                    symbol: "tag", placeholder: "Work", confirmTitle: "Add"),
+                let tag = FileActionPolicy.parsedTag(raw)
+            else { return }
+            writeTags(
+                FileActionPolicy.applying(tag, to: FileActionRunner.tags(at: result.url)),
+                on: result)
+        }
+    }
+
+    private func writeTags(_ tags: [String], on result: FileSearchResult) {
+        do {
+            try FileActionRunner.setTags(tags, at: result.url)
+            core.showMessage(tags.isEmpty ? "Removed tags" : "Updated tags")
+        } catch {
+            Task {
+                await core.showNotice(
+                    title: "Couldn’t Tag \(result.name)",
+                    message: error.localizedDescription,
+                    symbol: "tag", tone: .danger)
+            }
+        }
+    }
 }

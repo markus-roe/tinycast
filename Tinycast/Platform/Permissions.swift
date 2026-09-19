@@ -40,6 +40,18 @@ enum Permissions {
         (try? await EKEventStore().requestFullAccessToEvents()) ?? false
     }
 
+    static func remindersAccess() -> CalendarAccess {
+        switch EKEventStore.authorizationStatus(for: .reminder) {
+        case .fullAccess: return .granted
+        case .notDetermined: return .notDetermined
+        default: return .denied
+        }
+    }
+
+    nonisolated static func requestRemindersAccess() async -> Bool {
+        (try? await EKEventStore().requestFullAccessToReminders()) ?? false
+    }
+
     static func cameraAccess() -> CameraAccess {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized: return .granted
@@ -51,6 +63,15 @@ enum Permissions {
     /// The one camera prompt, raised from the gesture that asked for it.
     nonisolated static func requestCameraAccess() async -> Bool {
         await AVCaptureDevice.requestAccess(for: .video)
+    }
+
+    @MainActor
+    static func openRemindersSettings() {
+        guard
+            let url = URL(
+                string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Reminders")
+        else { return }
+        NSWorkspace.shared.open(url)
     }
 
     @MainActor

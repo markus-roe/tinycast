@@ -131,6 +131,7 @@ final class ClipboardCoordinator {
 
     /// Unmarked, so a converted colour enters history itself — it is one you meant to keep.
     func copyColor(_ color: ColorValue, as format: ColorFormat) {
+        core.colorHistory.record(color)
         paletteCoordinator.hidePalette(restoreFocus: false)
         Paster.copyPlainText(format.string(for: color))
     }

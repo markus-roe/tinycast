@@ -1,6 +1,8 @@
 # Emoji picker
 
 A palette sub-screen (reached like Clipboard / Calculator History) presenting a searchable emoji grid.
+SF Symbols are a sibling picker, documented in [sf-symbols.md](sf-symbols.md); this file is the
+emoji catalog only.
 
 ## Invariants
 

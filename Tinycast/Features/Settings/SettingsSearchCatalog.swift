@@ -110,7 +110,8 @@ enum SettingsSearchCatalog {
     static let entries: [SettingsSearchEntry] =
         general + applications + systemSettings + systemActions + commands + quicklinks
         + appleShortcuts + fallbacks + clipboard + snippets + fileSearch + windowManagement
-        + navigation + notes + calendar + emoji + ai + quickActions + extensions + permissions
+        + navigation + notes + calendar + reminders + emoji + ai + quickActions + extensions
+        + permissions
         + backup + about
 
     private static let general: [SettingsSearchEntry] = [
@@ -205,7 +206,10 @@ enum SettingsSearchCatalog {
     private static let commands: [SettingsSearchEntry] = [
         .init(
             pane: .commands,
-            keywords: ["custom", "script", "shell", "terminal"]),
+            keywords: [
+                "custom", "script", "shell", "terminal", "process", "port", "kill",
+                "timer", "reminder", "bell",
+            ]),
         .init(
             .commandsCommands, "Enable Commands",
             keywords: ["hide", "visibility"]),
@@ -323,7 +327,7 @@ enum SettingsSearchCatalog {
     private static let fileSearch: [SettingsSearchEntry] = [
         .init(
             pane: .fileSearch,
-            keywords: ["spotlight", "files", "folders", "find"]),
+            keywords: ["spotlight", "files", "folders", "find", "airdrop", "tags", "terminal"]),
         .init(
             .fileSearchFileSearch, "Enable File Search",
             keywords: ["spotlight", "index"]),
@@ -462,10 +466,10 @@ enum SettingsSearchCatalog {
     private static let emoji: [SettingsSearchEntry] = [
         .init(
             pane: .emoji,
-            keywords: ["picker", "character", "unicode", "smiley"]),
+            keywords: ["picker", "character", "unicode", "smiley", "SF Symbols"]),
         .init(
             group: .emojiCommands, "Emoji commands",
-            keywords: ["shortcut", "hotkey", "launcher", "picker"]),
+            keywords: ["shortcut", "hotkey", "launcher", "picker", "SF Symbols"]),
         .init(
             .emojiAppearance, "Emoji Skin Tone",
             keywords: ["colour", "color", "fitzpatrick", "default"]),
@@ -522,6 +526,18 @@ enum SettingsSearchCatalog {
             keywords: ["accounts", "sources", "choose", "icloud", "google"])
     ]
 
+    private static let reminders: [SettingsSearchEntry] = [
+        .init(
+            pane: .reminders,
+            keywords: ["apple reminders", "iphone", "todo", "timer", "icloud", "bell"]),
+        .init(
+            .remindersReminders, "Use Apple Reminders",
+            keywords: ["permission", "sync", "iphone", "eventkit"]),
+        .init(
+            group: .remindersCommands, "Reminder commands",
+            keywords: ["shortcut", "launcher", "create", "list"])
+    ]
+
     private static let extensions: [SettingsSearchEntry] = [
         .init(
             pane: .extensions,
@@ -561,7 +577,10 @@ enum SettingsSearchCatalog {
             keywords: ["paste", "keystrokes", "privacy", "grant"]),
         .init(
             .permissionsCalendars, "Calendars",
-            keywords: ["events", "privacy", "grant", "eventkit"])
+            keywords: ["events", "privacy", "grant", "eventkit"]),
+        .init(
+            .permissionsReminders, "Reminders",
+            keywords: ["apple reminders", "privacy", "grant", "iphone", "eventkit"])
     ]
 
     private static let backup: [SettingsSearchEntry] = [

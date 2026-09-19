@@ -13,7 +13,8 @@ feature is enabled in Settings.
   a broad filename.
 - **Everything under `Model/` stays Foundation-only and pure**, `FileSearchIgnoreList`'s `import Darwin`
   and `FileSearchFilter`'s `UniformTypeIdentifiers` included — value types with no environment of their
-  own. `file-search-test` compiles the shipped files together with the existing pure fuzzy scorer.
+  own. `FileActionPolicy` is the same: terminal folder, editor IDs and tag edits, no AppKit.
+  `file-search-test` compiles the shipped files together with the existing pure fuzzy scorer.
 - **Search is filename-only, and every list comes from Spotlight.** Tinycast creates no content index,
   history, query cache, watcher or search data — the blank screen's Recently Used rows are one more
   Spotlight query over the configured scopes, read from the system's own `kMDItemLastUsedDate` and
@@ -203,10 +204,14 @@ not outlive the window.
 | Open File / Open Folder | ↵ | `NSWorkspace`'s asynchronous configuration API; hides the palette without restoring focus, and reports a failure through the dialog controller |
 | Show in Finder | ⌘↵ | reveals and dismisses |
 | Quick Look | ⌘Y | the in-panel overlay above |
+| Open in Terminal | ⌘T | the folder, or the file's parent, in the first installed of Ghostty, Warp, iTerm, Terminal |
+| Open in Editor | — | the file or folder in the first installed of Cursor, VS Code, Zed, Xcode, Nova, Sublime; TextEdit only for a file |
+| Share via AirDrop | — | `NSSharingService.sendViaAirDrop`; hides the palette so the picker can take key |
 | Copy File | ⇧⌘C | the file itself on the pasteboard through `PasteboardFiles.write`, which declares `.fileURL` and the path as `.string` |
 | Copy Name | ⌥⌘C | through `Paster`, palette stays open |
 | Copy Path | ⌃⌘C | the standardized path, palette stays open |
 | Paste File to … | ⇧⌘V | `Paster.pasteFile` into the app the palette was summoned over, named by `PasteTarget` |
+| Finder tags | — | the seven colour labels as toggles, plus **Add Tag…** through `DialogAccessory.prompt` |
 | Move to Trash | ⌃X | `FileManager.trashItem` off the main actor, then the row leaves the session |
 
 None of the copies is marked with `ClipboardManager.internalType`, so a copied file enters clipboard

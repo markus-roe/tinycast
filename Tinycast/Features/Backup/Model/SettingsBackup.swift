@@ -72,6 +72,8 @@ struct SettingsBackup: Codable {
         var appleShortcutsEnabled: Bool?
         // `calendarEnabled` is absent: an import must not grant calendar access.
         var calendarShowInLauncher: Bool?
+        // `remindersEnabled` is absent: an import must not grant Reminders access.
+        var remindersShowInLauncher: Bool?
         var calendarLauncherLimit: Int?
         // Carried: it narrows what is read rather than widening what may be reached.
         var calendarIncludesTomorrow: Bool?
@@ -172,6 +174,7 @@ extension SettingsBackup {
             quicklinkConfirmsBeforeDelete: s.quicklinkConfirmsBeforeDelete,
             appleShortcutsEnabled: s.appleShortcutsEnabled,
             calendarShowInLauncher: s.calendarShowInLauncher,
+            remindersShowInLauncher: s.remindersShowInLauncher,
             calendarLauncherLimit: s.calendarLauncherLimit.rawValue,
             calendarIncludesTomorrow: s.calendarIncludesTomorrow,
             joinWindowMinutes: s.joinWindowMinutes.rawValue,
@@ -471,6 +474,10 @@ extension SettingsBackup {
         }
         if let flag = s.calendarShowInLauncher {
             settings.calendarShowInLauncher = flag
+            count += 1
+        }
+        if let flag = s.remindersShowInLauncher {
+            settings.remindersShowInLauncher = flag
             count += 1
         }
         if let raw = s.calendarLauncherLimit, let limit = CalendarLauncherLimit(rawValue: raw) {

@@ -32,6 +32,8 @@ final class AppCore {
     let aliases = AliasStore()
     let fallbacks = FallbackStore()
     let calcHistory = CalculatorHistoryStore()
+    let colorHistory = ColorHistoryStore()
+    let reminders = ReminderStore()
     let currencyRates = CurrencyRateStore()
     let regionNumberFormat = RegionNumberFormatMonitor()
     let calendarStore = CalendarStore()
@@ -41,9 +43,12 @@ final class AppCore {
     let emojiIndex = EmojiIndex()
     let frequentEmoji = FrequentEmojiStore()
     let pinnedEmoji = PinnedEmojiStore()
+    let symbolIndex = SymbolIndex()
+    let frequentSymbols = FrequentSymbolStore()
     let runningApps = RunningAppsMonitor()
     let palette = PaletteState()
     let fileSearch = FileSearchSession()
+    let processes = ProcessSession()
     let dictionary = DictionarySession()
     let menuSearch = MenuSearchSession()
     let windowSwitch = WindowSwitchSession()
@@ -86,8 +91,8 @@ final class AppCore {
 
     @ObservationIgnored private(set) lazy var paletteCoordinator = PaletteCoordinator(
         palette: palette, settings: settings, appIndex: appIndex,
-        fileSearch: fileSearch, menuSearch: menuSearch, windowSwitch: windowSwitch,
-        windowController: windowController)
+        fileSearch: fileSearch, processes: processes, menuSearch: menuSearch,
+        windowSwitch: windowSwitch, windowController: windowController)
     /// Its own window and lifecycle: neither coordinator shows or closes the other's surface.
     @ObservationIgnored private(set) lazy var settingsCoordinator = SettingsCoordinator(core: self)
     @ObservationIgnored private(set) lazy var onboardingCoordinator = OnboardingCoordinator(
@@ -160,6 +165,12 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var emojiCoordinator = EmojiCoordinator(
         frequentEmoji: frequentEmoji, settings: settings, windowController: windowController,
         paletteCoordinator: paletteCoordinator)
+    @ObservationIgnored private(set) lazy var symbolCoordinator = SymbolCoordinator(
+        frequent: frequentSymbols, windowController: windowController,
+        paletteCoordinator: paletteCoordinator)
+    @ObservationIgnored private(set) lazy var colorCoordinator = ColorCoordinator(
+        history: colorHistory, windowController: windowController,
+        paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var calculatorCoordinator = CalculatorCoordinator(
         calcHistory: calcHistory, paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var calendarCoordinator = CalendarCoordinator(
@@ -168,6 +179,11 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var fileSearchCoordinator = FileSearchCoordinator(
         settings: settings, appIndex: appIndex, session: fileSearch, palette: palette,
         paletteCoordinator: paletteCoordinator, windowController: windowController, core: self)
+    @ObservationIgnored private(set) lazy var processCoordinator = ProcessCoordinator(
+        session: processes, paletteCoordinator: paletteCoordinator, core: self)
+    @ObservationIgnored private(set) lazy var reminderCoordinator = ReminderCoordinator(
+        store: reminders, settings: settings, appIndex: appIndex,
+        paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var menuSearchCoordinator = MenuSearchCoordinator(
         settings: settings, appIndex: appIndex, session: menuSearch, palette: palette,
         paletteCoordinator: paletteCoordinator, core: self)
@@ -286,8 +302,10 @@ final class AppCore {
             }
             updateCoordinator.applyEnabled()
             calendarCoordinator.applyEnabled()
+            reminderCoordinator.applyEnabled()
             Task { await appIndex.refresh() }
             Task { await emojiIndex.load() }
+            Task { await symbolIndex.load() }
             currencyRates.start()
             updateChecker.onUpdateAvailable = { [weak self] release in
                 self?.updateCoordinator.presentIfAvailable(release) ?? true
@@ -575,6 +593,11 @@ final class AppCore {
                 _ = $0.calendarLauncherLimit
             }, reproject: { $0.calendarCoordinator.applyEnabled() })
         track(
+            {
+                _ = $0.remindersEnabled
+                _ = $0.remindersShowInLauncher
+            }, reproject: { $0.reminderCoordinator.applyEnabled() })
+        track(
             { _ = $0.calendarIncludesTomorrow },
             reproject: { $0.calendarCoordinator.applySpan() })
         track(
@@ -720,5 +743,19 @@ final class AppCore {
         snippetName: String, arguments: [SnippetTemplateEngine.MissingArgument]
     ) async -> [String: String]? {
         await dialogs.fillSnippetArguments(snippetName: snippetName, arguments: arguments)
+    }
+
+    /// A one-line prompt, for the same reason.
+    func prompt(
+        title: String, message: String?, symbol: String?, placeholder: String,
+        confirmTitle: String, initial: String = ""
+    ) async -> String? {
+        await dialogs.prompt(
+            title: title, message: message, symbol: symbol, placeholder: placeholder,
+            confirmTitle: confirmTitle, initial: initial)
+    }
+
+    func createReminder(form: ReminderForm) async -> ReminderDraft? {
+        await dialogs.createReminder(form: form)
     }
 }

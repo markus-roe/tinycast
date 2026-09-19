@@ -223,9 +223,9 @@ a narrow filter over a broad query can show fewer rows than the history holds.
 
 ## Colours
 
-A copied colour is drawn as the colour and can be copied back out in another notation. Two
-surfaces read one parser: the clipboard history, and the launcher, where pasting a colour answers
-with a card the way the calculator does.
+A copied colour is drawn as the colour and can be copied back out in another notation. Three
+surfaces read one parser: the clipboard history, the launcher card, and the [color picker](colors.md),
+where a sampled pixel and a typed conversion land in the same history.
 
 `ColorValue` (`Model/`, Foundation-only) is that parser. It takes the CSS spellings people copy —
 the four hex lengths, plus `rgb()`/`hsl()`/`oklch()` and their alpha forms in both the comma and
@@ -256,7 +256,7 @@ sweep compares to.
 Oklab is private to it: `oklch()` is the one thing it exists for. A neutral is stated with no hue at
 all, since `atan2` over two rounding errors still names a direction.
 
-The notations are a menu of their own under the launcher card, and **nowhere else** — a history
+The notations are a menu under the launcher card and on Color History — a *clipboard* history
 entry's ⌘K stays the actions it always was, since converting a colour is not something you reach
 for while browsing what you copied. **There is no submenu** either, the palette's menu being one
 level deep, so each row states its value through `PopoverMenuItem.detail`, never `shortcut`, which

@@ -27,6 +27,7 @@ struct FileSearchTests {
         policyResolution()
         resultModel()
         ranking()
+        fileActions()
 
         print(failures == 0 ? "File search tests passed" : "\(failures) file search tests failed")
         exit(failures == 0 ? 0 : 1)
@@ -300,5 +301,36 @@ struct FileSearchTests {
                 ignoring: FileSearchIgnoreList(patterns: ["Archive"])
             ).isEmpty,
             "ranking drops what the user's own patterns exclude")
+    }
+
+    static func fileActions() {
+        let file = URL(fileURLWithPath: "/Users/test/Documents/Notes.md")
+        let folder = URL(fileURLWithPath: "/Users/test/Documents")
+        expect(
+            FileActionPolicy.containerURL(for: file, isDirectory: false).path
+                == folder.path,
+            "a file opens its parent in Terminal")
+        expect(
+            FileActionPolicy.containerURL(for: folder, isDirectory: true).path
+                == folder.path,
+            "a folder opens itself in Terminal")
+        expect(
+            FileActionPolicy.parsedTag("  Work  ") == "Work", "a tag is trimmed")
+        expect(FileActionPolicy.parsedTag("   ") == nil, "a blank tag is refused")
+        expect(FileActionPolicy.isColorTag("red"), "Finder colour labels match case-insensitively")
+        expect(!FileActionPolicy.isColorTag("Work"), "a named tag is not a colour label")
+        expect(
+            FileActionPolicy.toggling("Red", in: []) == ["Red"], "a missing tag is added")
+        expect(
+            FileActionPolicy.toggling("Red", in: ["Red", "Work"]) == ["Work"],
+            "a present tag is removed")
+        expect(
+            FileActionPolicy.editorBundleIDs(openingFolder: true)
+                == FileActionPolicy.editorBundleIDs,
+            "a folder does not fall back to TextEdit")
+        expect(
+            FileActionPolicy.editorBundleIDs(openingFolder: false).last
+                == FileActionPolicy.documentEditorBundleID,
+            "a file may open in TextEdit when no code editor is installed")
     }
 }

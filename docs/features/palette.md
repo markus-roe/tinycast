@@ -10,9 +10,10 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
   panel to fit content and the top edge drifts on the compact↔expanded swap. A user drag is the one
   frame change that starts elsewhere, and `windowDidMove` folds it back into the anchor so the
   controller stays the authority.
-- **The flat `selection` index must match the visible row order exactly**, including the inline
-  calculator card at index 0 when present. Selection is the single source of truth for highlight and
-  activation. `Features/PaletteRowIndex.swift` is that mapping and stays **Foundation-only and pure** —
+- **The flat `selection` index must match the visible row order exactly**, including a lead card
+  (calculator, colour, reminder, meeting) at index 0 when present. Selection is the single source of
+  truth for highlight and activation. `Features/PaletteRowIndex.swift` is that mapping and stays
+  **Foundation-only and pure** —
   no SwiftUI, no AppKit — so `palette-selection-test` compiles the shipped type rather than a copy.
   Section headers are not selectable and never consume an index.
 - **A menu owns native text input while it is open.** Its panel becomes key so the menu field gets an
@@ -96,7 +97,11 @@ answers through `perform(_:at:)`, so a new chord never adds a cast to the shell.
 | `.clipboard` | `ClipboardScreen` | `ClipboardList` + preview |
 | `.calculatorHistory` | `CalculatorHistoryScreen` | `CalculatorHistoryList` |
 | `.emoji` | `EmojiScreen` | `EmojiGridView` |
+| `.sfSymbols` | `SymbolScreen` | `SymbolGridView` (see [sf-symbols.md](sf-symbols.md)) |
+| `.colors` | `ColorScreen` | `ColorHistoryList` (see [colors.md](colors.md)) |
 | `.fileSearch` | `FileSearchScreen` | `FileSearchList` (see [file-search.md](file-search.md)) |
+| `.processes` | `ProcessScreen` | `ProcessList` (see [processes.md](processes.md)) |
+| `.reminders` | `ReminderScreen` | `ReminderList` (see [reminders.md](reminders.md)) |
 | `.schedule` | `ScheduleScreen` | `ScheduleList` (see [calendar.md](calendar.md)) |
 | `.uninstall` | `UninstallScreen` | `UninstallList` (see [uninstall.md](uninstall.md)) |
 | `.quicklinks` | `QuicklinkListScreen` | `QuicklinkList` + preview (see [quicklinks.md](quicklinks.md#search-quicklinks)) |

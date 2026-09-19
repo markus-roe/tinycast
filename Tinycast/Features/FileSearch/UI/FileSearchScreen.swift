@@ -47,10 +47,17 @@ struct FileSearchScreen: PaletteScreen {
         case .copyPath: return run(.copyPath, at: selection)
         case .pasteFile: return run(.pasteFile, at: selection)
         case .quickLook: return toggleQuickLook(at: selection)
+        case .openInTerminal: return openInTerminal(at: selection)
         // No ⌃⇧X here: there is no "all" to trash, only the row under the selection.
         case .delete: return trash(at: selection)
         default: return false
         }
+    }
+
+    private func openInTerminal(at selection: Int) -> Bool {
+        guard let result = result(at: selection) else { return false }
+        core.fileSearchCoordinator.openInTerminal(result)
+        return true
     }
 
     /// ⌃X — mirrors the Actions row, as the clipboard's delete does; trashing asks nothing first.
@@ -158,6 +165,12 @@ enum FileSearchActionsMenu {
                 PopoverMenuItem(title: "Quick Look", systemImage: "eye", shortcut: "⌘Y") {
                     vm.fileSearchQuickLook = true
                 },
+            ]
+            + openWithItems(result: result, coordinator: coordinator)
+            + [
+                PopoverMenuItem(
+                    title: "Share via AirDrop", systemImage: "square.and.arrow.up"
+                ) { coordinator.shareViaAirDrop(result) },
                 PopoverMenuItem(
                     title: "Copy File", systemImage: "doc.on.clipboard", startsSection: true,
                     shortcut: "⇧⌘C"
@@ -172,10 +185,62 @@ enum FileSearchActionsMenu {
                 PopoverMenuItem(
                     title: "Copy Path", systemImage: "doc.on.clipboard", shortcut: "⌃⌘C"
                 ) { coordinator.copyPath(result) },
+            ]
+            + tagItems(result: result, coordinator: coordinator)
+            + [
                 PopoverMenuItem(
                     title: "Move to Trash", systemImage: "trash", startsSection: true,
                     shortcut: "⌃X", isDestructive: true
                 ) { coordinator.trash(result) }
             ])
+    }
+
+    private static func openWithItems(
+        result: FileSearchResult, coordinator: FileSearchCoordinator
+    ) -> [PopoverMenuItem] {
+        var items: [PopoverMenuItem] = []
+        if let terminal = FileActionRunner.installedTerminal() {
+            items.append(
+                PopoverMenuItem(
+                    title: "Open in \(terminal.name)", systemImage: "terminal", shortcut: "⌘T"
+                ) { coordinator.openInTerminal(result) })
+        }
+        if let editor = FileActionRunner.installedEditor(openingFolder: result.isDirectory) {
+            items.append(
+                PopoverMenuItem(
+                    title: "Open in \(editor.name)",
+                    systemImage: "chevron.left.forwardslash.chevron.right"
+                ) { coordinator.openInEditor(result) })
+        }
+        return items
+    }
+
+    private static func tagItems(
+        result: FileSearchResult, coordinator: FileSearchCoordinator
+    ) -> [PopoverMenuItem] {
+        let current = FileActionRunner.tags(at: result.url)
+        var items: [PopoverMenuItem] = []
+        var starts = true
+        for color in FileActionPolicy.colorTagNames {
+            let on = current.contains { $0.caseInsensitiveCompare(color) == .orderedSame }
+            items.append(
+                PopoverMenuItem(
+                    title: color, icon: .symbol("tag"),
+                    sectionTitle: starts ? "Tags" : nil, startsSection: starts,
+                    detail: on ? "On" : nil
+                ) { coordinator.toggleTag(color, on: result) })
+            starts = false
+        }
+        for tag in current where !FileActionPolicy.isColorTag(tag) {
+            items.append(
+                PopoverMenuItem(
+                    title: tag, icon: .symbol("tag"), detail: "On"
+                ) { coordinator.toggleTag(tag, on: result) })
+        }
+        items.append(
+            PopoverMenuItem(title: "Add Tag…", systemImage: "plus") {
+                coordinator.addTag(result)
+            })
+        return items
     }
 }

@@ -21,6 +21,8 @@ earliest scope wins).
   already decides whether they exist, so `Enable Commands` neither lists nor gates them — two switches
   over one row is how somebody ends up with Notes on and its shortcut dead. Everything the table does
   not name belongs to Settings › Commands and answers to that switch.
+- **A feature that replaces an app in search unlists it.** `AppIndex.setApplicationsListed` drops the
+  bundle from `matches` / `orderedResults` only. Settings → Applications and a bound shortcut stay.
 - **`Model/SearchRelevance.swift` is Foundation-only and pure**, so `fuzz-test` compiles the shipped
   scorer. It owns `FuzzyMatch`, `SearchAlias` and the cell table.
 - **`Model/EntryNaming.swift` is the only place a name is decided, for every kind alike.** Criteria

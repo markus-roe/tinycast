@@ -12,7 +12,12 @@ struct RootPaletteView: View {
     @Environment(CurrencyRateStore.self) private var currencyRates
     @Environment(EmojiIndex.self) private var emojiIndex
     @Environment(FrequentEmojiStore.self) private var frequentEmoji
+    @Environment(SymbolIndex.self) private var symbolIndex
+    @Environment(FrequentSymbolStore.self) private var frequentSymbols
+    @Environment(ColorHistoryStore.self) private var colorHistory
     @Environment(FileSearchSession.self) private var fileSearch
+    @Environment(ProcessSession.self) private var processes
+    @Environment(ReminderStore.self) private var reminders
     @Environment(DictionarySession.self) private var dictionary
     @Environment(MenuSearchSession.self) private var menuSearch
     @Environment(WindowSwitchSession.self) private var windowSwitch
@@ -53,7 +58,9 @@ struct RootPaletteView: View {
             return LauncherScreen(
                 appIndex: appIndex, favorites: favorites, visibility: visibility,
                 currencyRates: currencyRates, core: core, vm: vm, running: selectionIsRunning,
-                meeting: core.calendarCoordinator.cardedMeeting, now: meetingClock.now,
+                meeting: core.calendarCoordinator.cardedMeeting,
+                remindersReady: settings.remindersEnabled && reminders.access == .granted,
+                now: meetingClock.now,
                 openActions: openActions, openArgumentOptions: openArgumentOptions,
                 scrollToFollow: { scroll = ScrollIntent(kind: .follow) })
         case .uninstall:
@@ -71,9 +78,22 @@ struct RootPaletteView: View {
                 index: emojiIndex, frequent: frequentEmoji, pinned: core.pinnedEmoji, core: core, vm: vm,
                 tone: settings.emojiSkinTone, defaultColumns: settings.emojiGridColumns,
                 openActions: openActions)
+        case .sfSymbols:
+            return SymbolScreen(
+                index: symbolIndex, frequent: frequentSymbols, core: core, vm: vm,
+                openActions: openActions)
+        case .colors:
+            return ColorScreen(
+                history: colorHistory, core: core, vm: vm, openActions: openActions)
         case .fileSearch:
             return FileSearchScreen(
                 session: fileSearch, core: core, vm: vm, openActions: openActions)
+        case .processes:
+            return ProcessScreen(
+                session: processes, core: core, vm: vm, openActions: openActions)
+        case .reminders:
+            return ReminderScreen(
+                store: reminders, core: core, vm: vm, openActions: openActions)
         case .menuSearch:
             return MenuSearchScreen(
                 session: menuSearch, core: core, vm: vm, openActions: openActions)
@@ -177,6 +197,18 @@ struct RootPaletteView: View {
             })
     }
 
+    private var sfSymbolCategoryContent: PopoverMenuContent {
+        PopoverMenuContent(
+            items: symbolIndex.filters.enumerated().map { index, filter in
+                PopoverMenuItem(
+                    title: filter.title, systemImage: filter.systemImage,
+                    startsSection: index == 1
+                ) {
+                    vm.sfSymbolCategoryFilter = filter
+                }
+            })
+    }
+
     private var appMenuContent: PopoverMenuContent {
         let appName = Bundle.main.appDisplayName
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
@@ -233,6 +265,8 @@ struct RootPaletteView: View {
             return headerMenu(fileSearchFilterContent, width: metrics.size.fileSearchFilterMenuWidth)
         case .emojiCategory:
             return headerMenu(emojiCategoryContent, width: metrics.size.emojiCategoryMenuWidth)
+        case .sfSymbolCategory:
+            return headerMenu(sfSymbolCategoryContent, width: metrics.size.emojiCategoryMenuWidth)
         case .aiModel:
             return headerMenu(
                 AIModelMenu.models(coordinator: core.aiChatCoordinator),
@@ -365,6 +399,7 @@ struct RootPaletteView: View {
                 vm.selection = 0
                 scroll = ScrollIntent(kind: .top)
                 if vm.mode == .fileSearch { fileSearch.search(vm.query, filter: vm.fileSearchFilter) }
+                if vm.mode == .processes { processes.filter(vm.query) }
                 if vm.mode == .dictionary { dictionary.lookUp(vm.query) }
                 if vm.mode == .menuSearch { menuSearch.filter(vm.query) }
                 if vm.mode == .switchWindows { windowSwitch.filter(vm.query) }
@@ -413,6 +448,7 @@ struct RootPaletteView: View {
                 } else {
                     dictionary.reset()
                 }
+                if vm.mode != .processes { processes.reset() }
                 if vm.mode != .menuSearch { menuSearch.reset() }
                 if vm.mode != .switchWindows { windowSwitch.reset() }
                 // Leaving the screen any other way than Escape still ends the command's session.
@@ -670,6 +706,15 @@ struct RootPaletteView: View {
                     isOpen: openMenu == .emojiCategory,
                     help: "Filter by category  ⌘P",
                     action: toggleEmojiCategory)
+            }
+            if !isCollapsed, vm.mode == .sfSymbols {
+                headerGutter(width: metrics.spacing.md)
+                HeaderMenuButton(
+                    title: vm.sfSymbolCategoryFilter.title,
+                    systemImage: vm.sfSymbolCategoryFilter.systemImage,
+                    isOpen: openMenu == .sfSymbolCategory,
+                    help: "Filter by category  ⌘P",
+                    action: toggleSFSymbolCategory)
             }
             if !isCollapsed, vm.mode == .ai {
                 headerGutter(width: metrics.spacing.md)
@@ -951,6 +996,7 @@ struct RootPaletteView: View {
         case .clipboardFilter: toggleClipboardFilter()
         case .fileSearchFilter: toggleFileSearchFilter()
         case .emojiCategory: toggleEmojiCategory()
+        case .sfSymbolCategory: toggleSFSymbolCategory()
         case .ignored: return false
         }
         return true
@@ -963,6 +1009,15 @@ struct RootPaletteView: View {
         }
         let active = EmojiCategoryFilter.allCases.firstIndex(of: vm.emojiCategoryFilter) ?? 0
         open(.emojiCategory, highlighting: active)
+    }
+
+    private func toggleSFSymbolCategory() {
+        if openMenu == .sfSymbolCategory {
+            closeMenus()
+            return
+        }
+        let active = symbolIndex.filters.firstIndex(of: vm.sfSymbolCategoryFilter) ?? 0
+        open(.sfSymbolCategory, highlighting: active)
     }
 
     /// Opens on the choice the dropdown holds, exactly as the clipboard filter opens on its own.
@@ -1156,8 +1211,8 @@ struct RootPaletteView: View {
         case .app: .bottomLeading
         case .actions: .bottomTrailing
         case .argumentOptions: .belowHeaderTrailing
-        case .clipboardFilter, .fileSearchFilter, .emojiCategory, .aiModel, .aiReasoning,
-            .extensionAccessory:
+        case .clipboardFilter, .fileSearchFilter, .emojiCategory, .sfSymbolCategory, .aiModel,
+            .aiReasoning, .extensionAccessory:
             .belowHeaderTrailing
         case nil: nil
         }
@@ -1365,6 +1420,7 @@ private enum OpenMenu {
     case clipboardFilter
     case fileSearchFilter
     case emojiCategory
+    case sfSymbolCategory
     case aiModel
     case aiReasoning
 }

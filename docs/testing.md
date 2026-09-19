@@ -84,6 +84,8 @@ If a change touches anything in the right column, the harness on the left is man
 | `fuzz-test` | `Launcher/Model/SearchRelevance.swift`, `EntryNaming.swift`, `ScriptRomanization.swift`, `LauncherOrder.swift` |
 | `corpus-test` | the launcher's ranking, over a dense synthetic index — **a new complaint is a new case in `Tests/launcher-corpus/corpus.json`** |
 | `file-search-test` | `FileSearch/Model/`, plus the shared `FuzzyMatch` scorer |
+| `process-test` | `Processes/Model/` — query spelling, protection, listener-first ranking, the 200-row cap |
+| `reminder-test` | `Reminders/Model/` — query spelling, launcher lead, when-labels, due-first open order, the 200-row cap |
 | `file-search-session-test` | serialized query execution, debounce coalescing and cancellation |
 | `menu-search-test` | `MenuSearch/Model/` decisions, `MenuSearch/Service/` session filtering, the shared `FuzzyMatch` scorer |
 | `action-menu-search-test` | Action-menu query normalization and shared fuzzy matching |
@@ -97,6 +99,8 @@ If a change touches anything in the right column, the harness on the left is man
 | `clipboard-test` | `Clipboard/Model/ClipboardStore.swift`, `ClipboardFilter.swift`, `ClipboardFileKind.swift`, the colour trio |
 | `pasteboard-test` | `Clipboard/Service/ClipboardManager.swift` capture and `Paster.write` — what a Finder copy reads as, and what a file entry writes back |
 | `emoji-test` | `Emoji/Model/EmojiCatalog.swift`, `EmojiGridGeometry.swift`, the generated data |
+| `color-test` | `Colors/Model/ColorHistoryEntry.swift` with the clipboard colour trio — bump, cap, primary hex |
+| `sf-symbols-test` | `SFSymbols/Model/SymbolEntry.swift`, `SymbolSearch.swift` — name/keyword ranking and Swift copy spellings |
 | `emoji-search-test` | `Emoji/Service/EmojiIndex.swift`, `FrequentEmojiStore.swift`, `Scripts/gen-emoji.js`'s keyword format |
 | `palette-navigation-test` | `Palette/PaletteState.swift`'s screen motions — `prepare`, `replace`, `push`, `pop` |
 | `palette-selection-test` | `Features/PaletteRowIndex.swift` |
@@ -327,7 +331,7 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 - Palette hotkey opens the launcher; pressing it again closes it; Escape clears a non-empty query,
   then hides on a second press; clicking away closes it
-- Search a mode command (Clipboard History, Search Emoji, Search Quicklinks, Search Files, AI Chat)
+- Search a mode command (Clipboard History, Search Emoji, Search Quicklinks, Search Files, Manage Processes, Reminders, AI Chat)
   and run it: Escape returns to the launcher **with the query still typed and the row still
   selected**, and the next press clears it. The same screen from its own global hotkey hides the
   palette instead, and shows its own header icon rather than a back chevron
@@ -347,6 +351,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - ⌃N/⌃P move the highlight as ↓/↑ do; ⌃F/⌃B step the emoji grid's selection, and the caret elsewhere
 - The highlight always sits on the row the footer pill describes
 - With a calculation typed, the calculator card is first and is selected first
+- With Reminders on, `in 2m test` leads with the reminder card; ↵ adds and dismisses. `25m` stays the
+  calculator; `milk` does not take the first row
 - With macOS set to a decimal-comma region (Italian), `2,3 + 1,5` answers `3,8`, `max(2,5; 3)`
   answers `3`, and ↵ pastes `3,8`; General ▸ Calculator ▸ Number format `English` restores `2.3 + 1.5`
   and re-renders past Calculator History in the chosen format
@@ -439,6 +445,18 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Library internals, generated trees, application bundles and hidden paths do not appear
 - Visible custom top-level home folders and cloud-drive files remain searchable
 - Return opens, Command-Return reveals in Finder, and Copy Path keeps the palette open with a HUD
+- ⌘T opens the folder (or the file's parent) in the installed terminal; Open in Editor opens it in
+  Cursor when that is installed
+- Share via AirDrop hides the palette and shows the system picker
+- A colour tag toggles on the file; Add Tag… writes a named Finder tag
+
+### Processes
+
+- Manage Processes is in Settings → Commands and opens with listeners first
+- `:3000` lists only the process on that port; `3000` also matches a PID
+- ↵ quits without asking; ⌃X force-quits after a confirm
+- Tinycast, `kernel_task` and another user's process refuse Quit with a HUD
+- Copy PID keeps the palette open
 - Replacing a query quickly never lets an older result list overwrite the current query
 - A broad `.` search can be scrolled end to end; leaving it releases its fitted icons, and repeating the
   cycle does not raise the post-close memory floor
@@ -450,6 +468,21 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Recording a shortcut opens the palette straight into File Search, hidden from the launcher or not
 - Search Files is absent from Settings ▸ Commands, and `Enable Commands` off leaves its shortcut live
 - Export, clear both lists and the shortcut, re-import: all three return, defaults undo not duplicated
+
+### Reminders
+
+- With Reminders **off**: the commands are absent; turning the switch on asks, then the macOS prompt
+- Enabling in Settings exposes Reminders and Create Reminder; they persist across relaunch
+- With the feature on, typing Reminders finds the command only — not Reminders.app. Open Reminders
+  on the screen launches the app; turning the feature off puts the app back in search
+- `in 25m Tee` adds a timed Apple reminder; `milk` adds an undated one; `tomorrow milk` is 9:00
+- From root search, `in 2m test` adds without opening Reminders; the card is absent while the feature
+  is off
+- An empty field opens New Reminder…; the title is focused; date and time pickers set a due, chips
+  are shortcuts; Add with an empty title stays on the dialog
+- ↵ on an open row marks it done in Reminders.app; ⌃X asks before deleting on every device
+- A due reminder appears on the iPhone when iCloud Reminders is on
+- Denying Reminders access leaves the feature off
 
 ### Notes
 
